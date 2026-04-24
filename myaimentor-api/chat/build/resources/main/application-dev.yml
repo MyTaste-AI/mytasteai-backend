@@ -1,0 +1,14 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  data:
+    mongodb:
+      uri: mongodb://mentor:mentor1234@localhost:27017/myaimentor?authSource=admin
+
+logging:
+  level:
+    root: INFO
+    myaimentor_api: DEBUG
+    org.springframework.data.mongodb: DEBUG

@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: mentor
+  profiles:
+    active: dev
+
+server:
+  port: 8082

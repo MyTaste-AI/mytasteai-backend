@@ -10,14 +10,45 @@ myaimentor-ai/**/__pycache__/
 myaimentor-ai/**/*.pyc
 
 # Spring (spring/)
-spring/build/
-spring/.gradle/
-spring/out/
-spring/target/
-spring/bin/
-spring/src/main/resources/application-local.yml
-spring/src/main/resources/application-prod.yml
-!spring/gradle/wrapper/gradle-wrapper.jar
+# --- Spring Boot ---
+myaimentor-api/.gradle/
+myaimentor-api/build/
+myaimentor-api/out/
+myaimentor-api/.idea/
+myaimentor-api/*.iml
+myaimentor-api/HELP.md
+
+# Gradle wrapper 예외 (커밋 유지)
+!myaimentor-api/gradle/wrapper/gradle-wrapper.jar
+!myaimentor-api/**/src/main/**/build/
+!myaimentor-api/**/src/test/**/build/
+
+# STS (Spring Tool Suite)
+myaimentor-api/.apt_generated
+myaimentor-api/.classpath
+myaimentor-api/.factorypath
+myaimentor-api/.project
+myaimentor-api/.settings
+myaimentor-api/.springBeans
+myaimentor-api/.sts4-cache
+myaimentor-api/bin/
+!myaimentor-api/**/src/main/**/bin/
+!myaimentor-api/**/src/test/**/bin/
+
+# IntelliJ 추가 예외
+!myaimentor-api/**/src/main/**/out/
+!myaimentor-api/**/src/test/**/out/
+
+# NetBeans
+myaimentor-api/nbproject/private/
+myaimentor-api/nbbuild/
+myaimentor-api/dist/
+myaimentor-api/nbdist/
+myaimentor-api/.nb-gradle/
+
+# 환경별 설정: local만 Git 제외 (실제 비밀 값), dev/prod는 placeholder로 커밋
+myaimentor-api/**/src/main/resources/application-local.yml
+
 
 # IntelliJ
 .idea/
