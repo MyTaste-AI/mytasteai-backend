@@ -1,0 +1,50 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            # user 서비스: 인증 + 사용자 정보
+            - id: user-auth
+              uri: ${services.user-url}
+              predicates:
+                - Path=/auth/**
+            - id: user-account
+              uri: ${services.user-url}
+              predicates:
+                - Path=/users/**
+
+            # mentor 서비스: 카테고리 + 봇 (지식 포함)
+            - id: mentor-categories
+              uri: ${services.mentor-url}
+              predicates:
+                - Path=/categories/**
+            - id: mentor-bots
+              uri: ${services.mentor-url}
+              predicates:
+                - Path=/bots/**
+
+            # chat 서비스: 채팅 + 세션
+            - id: chat
+              uri: ${services.chat-url}
+              predicates:
+                - Path=/chat,/chat/**
+
+logging:
+  level:
+    root: INFO
+    myaimentor_api: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.cloud.gateway: INFO
+
+jwt:
+  secret: ${JWT_SECRET:dev-secret-change-me-please-this-is-only-for-local}
+
+services:
+  user-url: ${USER_SERVICE_URL:http://localhost:8081}
+  mentor-url: ${MENTOR_SERVICE_URL:http://localhost:8082}
+  chat-url: ${CHAT_SERVICE_URL:http://localhost:8083}

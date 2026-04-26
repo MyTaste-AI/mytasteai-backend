@@ -1,5 +1,6 @@
-﻿services:
+services:
   postgres:
+    # PostgreSQL 16 + pgvector 확장. 일반 테이블 + 벡터 임베딩 모두 사용.
     image: pgvector/pgvector:pg16
     container_name: myaimentor-postgres
     restart: unless-stopped
@@ -11,18 +12,28 @@
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mentor -d myaimentor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mongodb:
-    image: mongo:7
+    image: mongo:6
     container_name: myaimentor-mongo
     restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: mentor
-      MONGO_INITDB_ROOT_PASSWORD: mentor1234
+    # dev 전용: java driver 5.5.1 ↔ mongo SCRAM 호환 이슈 우회.
+    # prod 에선 인증 켜고 사용해야 함.
+    command: ["--noauth"]
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
