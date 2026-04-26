@@ -46,13 +46,18 @@ public class ChatServiceImpl implements ChatService {
 		BotInfo bot = mentorClient.findBot(request.botId(), bearerToken);
 
 		// 2) AI 답변 생성 — provider 는 mentor 응답의 enum 명(OPENAI/GEMINI) → 소문자로
+		// 봇 설정의 검색 파라미터(searchType/topK/scoreThreshold) 도 함께 전달 →
+		// AI 서비스가 RAG 검색에 활용 (미지원이면 무시).
 		String providerLower = bot.provider().toLowerCase();
+		String searchTypeLower = bot.searchType() == null ? null : bot.searchType().toLowerCase();
 		GenerateResponse aiResp = aiServiceClient.generate(new GenerateRequest(
 				request.question(),
 				providerLower,
 				bot.id(),
 				bot.systemPrompt(),
-				null
+				searchTypeLower,
+				bot.topK(),
+				bot.scoreThreshold()
 		));
 
 		// 3) 세션 로드 또는 신규

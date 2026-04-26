@@ -2,6 +2,7 @@ package myaimentor_api.mentor.knowledge;
 
 import myaimentor_api.mentor.ai.dto.KnowledgeResponse;
 import myaimentor_api.mentor.knowledge.dto.KnowledgeCreateRequest;
+import myaimentor_api.mentor.knowledge.dto.KnowledgePreviewResponse;
 
 import java.util.List;
 
@@ -13,7 +14,13 @@ public interface KnowledgeService {
 
 	List<KnowledgeResponse> list(Long botId, int limit, int offset);
 
-	KnowledgeResponse create(Long botId, KnowledgeCreateRequest request);
+	List<KnowledgeResponse> create(Long botId, KnowledgeCreateRequest request);
 
 	void delete(Long botId, Long knowledgeId);
+
+	/**
+	 * 봇의 청킹 설정으로 미리보기 — 저장 없음.
+	 * AI 서비스가 미구현이면 BAD_GATEWAY (EXT-008) 로 응답되어 프론트가 fallback.
+	 */
+	KnowledgePreviewResponse preview(Long botId, String content);
 }

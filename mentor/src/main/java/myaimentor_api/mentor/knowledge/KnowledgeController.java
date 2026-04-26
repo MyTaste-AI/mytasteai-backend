@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import myaimentor_api.mentor.ai.dto.KnowledgeResponse;
 import myaimentor_api.mentor.knowledge.dto.KnowledgeCreateRequest;
+import myaimentor_api.mentor.knowledge.dto.KnowledgePreviewRequest;
+import myaimentor_api.mentor.knowledge.dto.KnowledgePreviewResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -52,17 +54,31 @@ public class KnowledgeController {
 
 	/**
 	 * 지식 등록 (ADMIN)
-	 * - 성공 시 201 Created + AI 서비스가 반환한 KnowledgeResponse
+	 * - AI 서비스가 봇의 청킹 설정으로 분할 → 청크별 row 생성
+	 * - 성공 시 201 Created + List<KnowledgeResponse> (각 청크 1개씩)
 	 * - 봇 미존재 시 404 (BOT-001)
 	 * - AI 호출 실패 시 502 (EXT-005)
 	 */
 	@PostMapping
-	public ResponseEntity<KnowledgeResponse> create(
+	public ResponseEntity<List<KnowledgeResponse>> create(
 			@PathVariable Long botId,
 			@RequestBody @Valid KnowledgeCreateRequest request
 	) {
-		KnowledgeResponse created = knowledgeService.create(botId, request);
+		List<KnowledgeResponse> created = knowledgeService.create(botId, request);
 		return ResponseEntity.status(HttpStatus.CREATED).body(created);
+	}
+
+	/**
+	 * 청킹 미리보기 (ADMIN, 등록 X)
+	 * - 봇의 청킹 설정으로 분할만 시도해 결과 반환
+	 * - AI 서비스가 /knowledge/preview 미구현이면 502 (EXT-008) — 클라이언트가 fallback
+	 */
+	@PostMapping("/preview")
+	public KnowledgePreviewResponse preview(
+			@PathVariable Long botId,
+			@RequestBody @Valid KnowledgePreviewRequest request
+	) {
+		return knowledgeService.preview(botId, request.content());
 	}
 
 	/**

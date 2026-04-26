@@ -8,6 +8,7 @@ import myaimentor_api.mentor.ai.dto.KnowledgeResponse;
 import myaimentor_api.mentor.domain.Bot;
 import myaimentor_api.mentor.domain.BotRepository;
 import myaimentor_api.mentor.knowledge.dto.KnowledgeCreateRequest;
+import myaimentor_api.mentor.knowledge.dto.KnowledgePreviewResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,9 +38,18 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
 	@Override
 	@Transactional(readOnly = true)
-	public KnowledgeResponse create(Long botId, KnowledgeCreateRequest request) {
+	public List<KnowledgeResponse> create(Long botId, KnowledgeCreateRequest request) {
 		Bot bot = requireBot(botId);
-		return aiServiceClient.createKnowledge(bot.getId(), request.content(), bot.getProvider());
+		// 봇 설정의 청킹 파라미터를 AI 서비스에 전달 → AI 가 청크 분할 + 임베딩 + 저장
+		// 응답은 생성된 청크 리스트 (1 등록 → N row).
+		return aiServiceClient.createKnowledge(
+				bot.getId(),
+				request.content(),
+				bot.getProvider(),
+				bot.getChunkSize(),
+				bot.getChunkOverlap(),
+				bot.getChunkSplitter()
+		);
 	}
 
 	@Override
@@ -47,6 +57,18 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 	public void delete(Long botId, Long knowledgeId) {
 		Bot bot = requireBot(botId);
 		aiServiceClient.deleteKnowledge(knowledgeId, bot.getProvider());
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public KnowledgePreviewResponse preview(Long botId, String content) {
+		Bot bot = requireBot(botId);
+		return aiServiceClient.previewKnowledge(
+				content,
+				bot.getChunkSize(),
+				bot.getChunkOverlap(),
+				bot.getChunkSplitter()
+		);
 	}
 
 	private Bot requireBot(Long botId) {

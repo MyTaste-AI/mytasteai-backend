@@ -29,6 +29,8 @@ public enum ErrorCode {
 	CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CAT-001", "카테고리를 찾을 수 없습니다."),
 	CATEGORY_ALREADY_EXISTS(HttpStatus.CONFLICT, "CAT-002", "이미 존재하는 카테고리입니다."),
 	CATEGORY_INVALID(HttpStatus.BAD_REQUEST, "CAT-003", "존재하지 않는 카테고리입니다."),
+	CATEGORY_MAX_DEPTH(HttpStatus.BAD_REQUEST, "CAT-004", "카테고리는 최대 2단계(대분류/중분류) 까지만 만들 수 있습니다."),
+	CATEGORY_HAS_CHILDREN(HttpStatus.CONFLICT, "CAT-005", "하위 카테고리가 있어 삭제할 수 없습니다. 먼저 하위 항목을 삭제해주세요."),
 
 	// ===== 채팅 =====
 	CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT-001", "세션을 찾을 수 없습니다."),
@@ -41,6 +43,7 @@ public enum ErrorCode {
 	AI_KNOWLEDGE_CREATE_FAILED(HttpStatus.BAD_GATEWAY, "EXT-005", "AI knowledge 등록 실패"),
 	AI_KNOWLEDGE_LIST_FAILED(HttpStatus.BAD_GATEWAY, "EXT-006", "AI knowledge 조회 실패"),
 	AI_KNOWLEDGE_DELETE_FAILED(HttpStatus.BAD_GATEWAY, "EXT-007", "AI knowledge 삭제 실패"),
+	AI_KNOWLEDGE_PREVIEW_FAILED(HttpStatus.BAD_GATEWAY, "EXT-008", "AI knowledge 미리보기 실패"),
 
 	// ===== 시스템 =====
 	VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "SYS-001", "요청 값이 올바르지 않습니다."),

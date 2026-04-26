@@ -6,8 +6,11 @@ import myaimentor_api.common.error.BusinessException;
 import myaimentor_api.common.error.ErrorCode;
 import myaimentor_api.mentor.ai.dto.BotVectorUpsertRequest;
 import myaimentor_api.mentor.ai.dto.KnowledgeCreateRequest;
+import myaimentor_api.mentor.ai.dto.KnowledgePreviewRequest;
 import myaimentor_api.mentor.ai.dto.KnowledgeResponse;
+import myaimentor_api.mentor.domain.ChunkSplitter;
 import myaimentor_api.mentor.domain.Provider;
+import myaimentor_api.mentor.knowledge.dto.KnowledgePreviewResponse;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -66,17 +69,55 @@ public class AiServiceClient {
 
 	/* ===== Knowledge ===== */
 
-	public KnowledgeResponse createKnowledge(Long botId, String content, Provider provider) {
-		var body = new KnowledgeCreateRequest(botId, content, provider.toAiServiceValue());
+	/**
+	 * 지식 등록 — AI 서비스가 청킹해서 청크별 row 생성. 응답은 생성된 청크 리스트.
+	 */
+	public List<KnowledgeResponse> createKnowledge(
+			Long botId,
+			String content,
+			Provider provider,
+			Integer chunkSize,
+			Integer chunkOverlap,
+			ChunkSplitter chunkSplitter
+	) {
+		String splitter = chunkSplitter == null ? null : chunkSplitter.name().toLowerCase();
+		var body = new KnowledgeCreateRequest(
+				botId, content, provider.toAiServiceValue(),
+				chunkSize, chunkOverlap, splitter
+		);
 		try {
 			return aiServiceWebClient.post()
 					.uri("/knowledge")
 					.bodyValue(body)
 					.retrieve()
-					.bodyToMono(KnowledgeResponse.class)
+					.bodyToMono(new ParameterizedTypeReference<List<KnowledgeResponse>>() {})
 					.block();
 		} catch (WebClientResponseException e) {
 			throw translate(e, ErrorCode.AI_KNOWLEDGE_CREATE_FAILED);
+		}
+	}
+
+	/**
+	 * 청킹 미리보기 — DB 저장 X, 분할 결과만 반환.
+	 * AI 서비스가 미구현 (404) 이면 BAD_GATEWAY 로 변환되어 클라이언트가 fallback 가능.
+	 */
+	public KnowledgePreviewResponse previewKnowledge(
+			String content,
+			Integer chunkSize,
+			Integer chunkOverlap,
+			ChunkSplitter chunkSplitter
+	) {
+		String splitter = chunkSplitter == null ? null : chunkSplitter.name().toLowerCase();
+		var body = new KnowledgePreviewRequest(content, chunkSize, chunkOverlap, splitter);
+		try {
+			return aiServiceWebClient.post()
+					.uri("/knowledge/preview")
+					.bodyValue(body)
+					.retrieve()
+					.bodyToMono(KnowledgePreviewResponse.class)
+					.block();
+		} catch (WebClientResponseException e) {
+			throw translate(e, ErrorCode.AI_KNOWLEDGE_PREVIEW_FAILED);
 		}
 	}
 

@@ -46,8 +46,9 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.POST, "/categories", "/bots").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.DELETE, "/categories/*", "/bots/*").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.PATCH, "/bots/*").hasRole("ADMIN")
-						// 지식 — ADMIN (등록/삭제만)
+						// 지식 — ADMIN (등록/삭제/미리보기)
 						.requestMatchers(HttpMethod.POST, "/bots/*/knowledge").hasRole("ADMIN")
+						.requestMatchers(HttpMethod.POST, "/bots/*/knowledge/preview").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.DELETE, "/bots/*/knowledge/*").hasRole("ADMIN")
 						// 그 외 (조회 계열)는 인증만 되어 있으면 OK
 						.anyRequest().authenticated()

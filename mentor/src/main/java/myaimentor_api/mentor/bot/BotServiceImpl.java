@@ -66,6 +66,12 @@ public class BotServiceImpl implements BotService {
 				.provider(request.provider())
 				.categoryId(request.categoryId())
 				.createdBy(createdBy)
+				.searchType(request.searchType())
+				.topK(request.topK())
+				.scoreThreshold(request.scoreThreshold())
+				.chunkSize(request.chunkSize())
+				.chunkOverlap(request.chunkOverlap())
+				.chunkSplitter(request.chunkSplitter())
 				.build());
 
 		// AI 서비스에 라우팅 벡터 등록 — 실패하면 트랜잭션 롤백
@@ -86,7 +92,9 @@ public class BotServiceImpl implements BotService {
 		Provider previousProvider = bot.getProvider();
 		boolean aiResyncNeeded = bot.update(
 				request.name(), request.description(), request.systemPrompt(),
-				request.provider(), request.categoryId()
+				request.provider(), request.categoryId(),
+				request.searchType(), request.topK(), request.scoreThreshold(),
+				request.chunkSize(), request.chunkOverlap(), request.chunkSplitter()
 		);
 
 		if (aiResyncNeeded) {

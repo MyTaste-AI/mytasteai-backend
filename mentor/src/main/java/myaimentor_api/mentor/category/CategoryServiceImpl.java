@@ -14,12 +14,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * 카테고리 서비스 구현 — 봇 분류용 카테고리의 단순 CRUD.
- * AI 서비스와 동기화 없음 (카테고리는 Spring DB 단독 관리).
+ * 카테고리 서비스 구현 — 2단계 트리(대분류/중분류) CRUD.
  *
- * - findAll: id ASC 고정 정렬 (UI 일관성)
- * - create:  이름 중복 시 409 (CAT-002)
- * - delete:  미존재 시 404 (CAT-001) — 멱등 정책 아님
+ * 규칙:
+ *  - parentId == null  → 대분류 생성. 같은 레벨에서 이름 중복 금지.
+ *  - parentId != null  → 중분류 생성. 부모는 반드시 대분류여야 함 (CAT-004).
+ *  - 같은 부모 아래 이름 중복 금지 (다른 부모 아래에선 같은 이름 허용 — 예: "IT/백엔드", "디자인/백엔드 그래픽")
+ *  - 자식이 있는 카테고리는 삭제 불가 (CAT-005)
  */
 @Service
 @RequiredArgsConstructor
@@ -30,6 +31,7 @@ public class CategoryServiceImpl implements CategoryService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<CategoryResponse> findAll() {
+		// 평탄화 응답 — UI 가 parentId 기준으로 그룹핑한다.
 		return categoryRepository.findAll(Sort.by(Sort.Direction.ASC, "id"))
 				.stream()
 				.map(CategoryResponse::from)
@@ -39,10 +41,29 @@ public class CategoryServiceImpl implements CategoryService {
 	@Override
 	@Transactional
 	public Long create(CategoryCreateRequest request) {
-		if (categoryRepository.existsByName(request.name())) {
-			throw new BusinessException(ErrorCode.CATEGORY_ALREADY_EXISTS);
+		Long parentId = request.parentId();
+
+		if (parentId != null) {
+			// 중분류 생성 — 부모 검증
+			Category parent = categoryRepository.findById(parentId)
+					.orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_INVALID));
+			if (parent.getParentId() != null) {
+				// 부모가 이미 중분류 — 깊이 초과
+				throw new BusinessException(ErrorCode.CATEGORY_MAX_DEPTH);
+			}
+			if (categoryRepository.existsByNameAndParentId(request.name(), parentId)) {
+				throw new BusinessException(ErrorCode.CATEGORY_ALREADY_EXISTS);
+			}
+		} else {
+			// 대분류 생성 — 같은 레벨 이름 중복 검사
+			if (categoryRepository.existsByNameAndParentIdIsNull(request.name())) {
+				throw new BusinessException(ErrorCode.CATEGORY_ALREADY_EXISTS);
+			}
 		}
-		Category saved = categoryRepository.save(Category.builder().name(request.name()).build());
+
+		Category saved = categoryRepository.save(
+				Category.builder().name(request.name()).parentId(parentId).build()
+		);
 		return saved.getId();
 	}
 
@@ -51,6 +72,10 @@ public class CategoryServiceImpl implements CategoryService {
 	public void delete(Long id) {
 		if (!categoryRepository.existsById(id)) {
 			throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
+		}
+		// 자식이 있으면 삭제 거부 — UI 에서 안내하고 사용자가 자식부터 정리
+		if (categoryRepository.existsByParentId(id)) {
+			throw new BusinessException(ErrorCode.CATEGORY_HAS_CHILDREN);
 		}
 		categoryRepository.deleteById(id);
 	}
