@@ -1,10 +1,8 @@
 package myaimentor_api.user.auth;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import myaimentor_api.user.domain.Role;
+import myaimentor_api.common.auth.JwtProperties;
 import myaimentor_api.user.domain.User;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +11,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 
+/**
+ * 액세스 토큰 발급 — 검증은 common.auth.JwtVerifier 가 담당한다.
+ */
 @Component
 public class JwtProvider {
 
@@ -37,17 +38,5 @@ public class JwtProvider {
 				.expiration(Date.from(now.plusMillis(accessTokenExpiration)))
 				.signWith(key)
 				.compact();
-	}
-
-	public AuthPrincipal parse(String token) {
-		Jws<Claims> jws = Jwts.parser()
-				.verifyWith(key)
-				.build()
-				.parseSignedClaims(token);
-		Claims claims = jws.getPayload();
-		Long userId = Long.parseLong(claims.getSubject());
-		String email = claims.get(CLAIM_EMAIL, String.class);
-		Role role = Role.valueOf(claims.get(CLAIM_ROLE, String.class));
-		return new AuthPrincipal(userId, email, role);
 	}
 }

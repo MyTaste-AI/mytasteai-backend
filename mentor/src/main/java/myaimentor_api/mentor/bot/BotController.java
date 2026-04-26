@@ -2,7 +2,9 @@ package myaimentor_api.mentor.bot;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import myaimentor_api.mentor.auth.AuthPrincipal;
+import myaimentor_api.common.auth.AuthPrincipal;
+import myaimentor_api.common.error.BusinessException;
+import myaimentor_api.common.error.ErrorCode;
 import myaimentor_api.mentor.bot.dto.BotCreateRequest;
 import myaimentor_api.mentor.bot.dto.BotResponse;
 import myaimentor_api.mentor.bot.dto.BotSummaryResponse;
@@ -24,18 +26,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 
 /**
  * 봇 API.
- * - GET /bots             : 목록 (categoryId 필터 가능)
- * - GET /bots/{id}        : 상세
- * - POST /bots            : 생성 (ADMIN, AI bot-vectors 동기화)
- * - PATCH /bots/{id}      : 수정 (ADMIN, description/provider 변경 시 AI 재호출)
+ * - GET    /bots          : 목록 (categoryId 필터 가능, 페이징)
+ * - GET    /bots/{id}     : 상세
+ * - POST   /bots          : 생성 (ADMIN, AI bot-vectors 동기화)
+ * - PATCH  /bots/{id}     : 수정 (ADMIN, description/provider 변경 시 AI 재호출)
  * - DELETE /bots/{id}     : 삭제 (ADMIN, AI bot-vectors 정리)
+ *
+ * 조회는 인증 사용자 누구나, 변경은 ADMIN 만 (SecurityConfig 에서 메서드별 분리).
  */
 @RestController
 @RequestMapping("/bots")
@@ -44,7 +47,10 @@ public class BotController {
 
 	private final BotService botService;
 
-	/** 봇 목록 (categoryId 옵션 필터, 페이징 지원) */
+	/**
+	 * 봇 목록 — categoryId 옵션 필터 + 페이징.
+	 * 기본 정렬은 id DESC (최근 등록 순).
+	 */
 	@GetMapping
 	public Page<BotSummaryResponse> findAll(
 			@RequestParam(required = false) Long categoryId,
@@ -53,33 +59,49 @@ public class BotController {
 		return botService.findAll(categoryId, pageable);
 	}
 
-	/** 봇 상세 */
+	/**
+	 * 봇 상세 조회 — 미존재 시 404 (BOT-001).
+	 */
 	@GetMapping("/{id}")
 	public BotResponse findById(@PathVariable Long id) {
 		return botService.findById(id);
 	}
 
-	/** 봇 생성 — Spring DB 저장 + AI bot-vectors upsert */
+	/**
+	 * 봇 생성 (ADMIN)
+	 *
+	 * Spring DB 저장 + AI bot-vectors upsert 를 동일 트랜잭션 안에서 처리.
+	 * AI 호출이 실패하면 DB 도 롤백된다.
+	 * - 성공 시 201 Created + Location 헤더(/bots/{id})
+	 * - 카테고리 미존재 시 400 (CAT-003)
+	 * - AI 동기화 실패 시 502 (EXT-003)
+	 */
 	@PostMapping
 	public ResponseEntity<Void> create(
 			@AuthenticationPrincipal AuthPrincipal principal,
 			@RequestBody @Valid BotCreateRequest request
 	) {
 		if (principal == null) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+			throw new BusinessException(ErrorCode.AUTH_REQUIRED);
 		}
 		Long id = botService.create(request, principal.userId());
 		URI location = UriComponentsBuilder.fromPath("/bots/{id}").buildAndExpand(id).toUri();
 		return ResponseEntity.created(location).build();
 	}
 
-	/** 봇 수정 — description/provider 변경 시 AI 재동기화 */
+	/**
+	 * 봇 수정 (ADMIN) — 부분 업데이트.
+	 * description 또는 provider 가 바뀌면 AI 측 벡터를 재동기화한다.
+	 * provider 변경 시 이전 provider 의 벡터를 먼저 삭제 후 새로 등록.
+	 */
 	@PatchMapping("/{id}")
 	public BotResponse update(@PathVariable Long id, @RequestBody @Valid BotUpdateRequest request) {
 		return botService.update(id, request);
 	}
 
-	/** 봇 삭제 — AI bot-vectors 도 같이 삭제 (멱등) */
+	/**
+	 * 봇 삭제 (ADMIN) — DB 삭제 후 AI 측 벡터도 정리 (멱등 — 이미 없으면 무시).
+	 */
 	@DeleteMapping("/{id}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void delete(@PathVariable Long id) {

@@ -1,8 +1,8 @@
 package myaimentor_api.chat.config;
 
-import lombok.RequiredArgsConstructor;
-import myaimentor_api.chat.auth.JwtAuthenticationFilter;
-import myaimentor_api.chat.auth.JwtProperties;
+import myaimentor_api.common.auth.JwtAuthenticationFilter;
+import myaimentor_api.common.auth.JwtProperties;
+import myaimentor_api.common.auth.JwtVerifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,19 +16,21 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * chat 서비스 보안 — 모든 /chat/** 엔드포인트는 인증 필요 (USER/ADMIN 무관).
- * 권한 차이 없이 본인 세션만 접근 가능 (서비스 레이어에서 userId 비교).
+ * chat 서비스 보안 — 모든 /chat/** 엔드포인트는 인증 필요.
+ * 본인 세션만 접근 가능 (서비스 레이어에서 userId 비교).
  */
 @Configuration
 @EnableWebSecurity
 @EnableConfigurationProperties(JwtProperties.class)
-@RequiredArgsConstructor
 public class SecurityConfig {
 
-	private final JwtAuthenticationFilter jwtAuthenticationFilter;
+	@Bean
+	public JwtAuthenticationFilter jwtAuthenticationFilter(JwtVerifier jwtVerifier) {
+		return new JwtAuthenticationFilter(jwtVerifier);
+	}
 
 	@Bean
-	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+	public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
 		http
 				.csrf(AbstractHttpConfigurer::disable)
 				.formLogin(AbstractHttpConfigurer::disable)

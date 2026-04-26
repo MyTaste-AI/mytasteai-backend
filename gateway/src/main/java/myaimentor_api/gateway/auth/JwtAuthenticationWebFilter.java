@@ -2,6 +2,7 @@ package myaimentor_api.gateway.auth;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import myaimentor_api.common.auth.JwtVerifier;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;

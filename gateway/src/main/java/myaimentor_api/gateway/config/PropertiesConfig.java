@@ -1,6 +1,6 @@
 package myaimentor_api.gateway.config;
 
-import myaimentor_api.gateway.auth.JwtProperties;
+import myaimentor_api.common.auth.JwtProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 

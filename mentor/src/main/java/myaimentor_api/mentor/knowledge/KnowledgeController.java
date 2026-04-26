@@ -25,9 +25,9 @@ import java.util.List;
  * 봇 지식 API — AI 마이크로서비스로 그대로 위임 (Spring DB 미저장).
  * 응답 스키마는 AI 서비스가 제공하는 KnowledgeResponse 그대로.
  *
- * - GET    /bots/{botId}/knowledge          : 지식 목록
- * - POST   /bots/{botId}/knowledge          : 지식 등록 (ADMIN)
- * - DELETE /bots/{botId}/knowledge/{id}     : 지식 삭제 (ADMIN)
+ * - GET    /bots/{botId}/knowledge       : 지식 목록 (인증 누구나, limit/offset 페이징)
+ * - POST   /bots/{botId}/knowledge       : 지식 등록 (ADMIN)
+ * - DELETE /bots/{botId}/knowledge/{id}  : 지식 삭제 (ADMIN)
  */
 @RestController
 @RequestMapping("/bots/{botId}/knowledge")
@@ -37,6 +37,10 @@ public class KnowledgeController {
 
 	private final KnowledgeService knowledgeService;
 
+	/**
+	 * 지식 목록 — limit/offset 기반 페이징 (Pageable 미사용, AI 서비스 페이징 규약에 맞춤).
+	 * limit 은 1~100 범위 검증.
+	 */
 	@GetMapping
 	public List<KnowledgeResponse> list(
 			@PathVariable Long botId,
@@ -46,6 +50,12 @@ public class KnowledgeController {
 		return knowledgeService.list(botId, limit, offset);
 	}
 
+	/**
+	 * 지식 등록 (ADMIN)
+	 * - 성공 시 201 Created + AI 서비스가 반환한 KnowledgeResponse
+	 * - 봇 미존재 시 404 (BOT-001)
+	 * - AI 호출 실패 시 502 (EXT-005)
+	 */
 	@PostMapping
 	public ResponseEntity<KnowledgeResponse> create(
 			@PathVariable Long botId,
@@ -55,6 +65,9 @@ public class KnowledgeController {
 		return ResponseEntity.status(HttpStatus.CREATED).body(created);
 	}
 
+	/**
+	 * 지식 삭제 (ADMIN) — botId 는 권한 라우팅용이며 실제 삭제는 knowledgeId 로.
+	 */
 	@DeleteMapping("/{id}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void delete(@PathVariable Long botId, @PathVariable Long id) {

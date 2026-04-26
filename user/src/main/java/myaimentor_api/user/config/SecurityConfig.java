@@ -1,8 +1,8 @@
 package myaimentor_api.user.config;
 
-import lombok.RequiredArgsConstructor;
-import myaimentor_api.user.auth.JwtAuthenticationFilter;
-import myaimentor_api.user.auth.JwtProperties;
+import myaimentor_api.common.auth.JwtAuthenticationFilter;
+import myaimentor_api.common.auth.JwtProperties;
+import myaimentor_api.common.auth.JwtVerifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,10 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @EnableConfigurationProperties(JwtProperties.class)
-@RequiredArgsConstructor
 public class SecurityConfig {
-
-	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
@@ -32,7 +29,12 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+	public JwtAuthenticationFilter jwtAuthenticationFilter(JwtVerifier jwtVerifier) {
+		return new JwtAuthenticationFilter(jwtVerifier);
+	}
+
+	@Bean
+	public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
 		http
 				.csrf(AbstractHttpConfigurer::disable)
 				.formLogin(AbstractHttpConfigurer::disable)
@@ -42,8 +44,6 @@ public class SecurityConfig {
 						.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(HttpMethod.POST, "/auth/signup", "/auth/login", "/auth/logout").permitAll()
-						// ResponseStatusException 등 sendError() 경유 시 내부 /error 디스패치가 인증 필터를
-						// 다시 통과하므로, 미인증 401로 덮어써지지 않도록 명시적으로 허용.
 						.requestMatchers("/error").permitAll()
 						.anyRequest().authenticated()
 				)

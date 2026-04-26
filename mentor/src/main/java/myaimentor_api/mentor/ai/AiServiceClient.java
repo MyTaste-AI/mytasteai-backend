@@ -2,6 +2,8 @@ package myaimentor_api.mentor.ai;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import myaimentor_api.common.error.BusinessException;
+import myaimentor_api.common.error.ErrorCode;
 import myaimentor_api.mentor.ai.dto.BotVectorUpsertRequest;
 import myaimentor_api.mentor.ai.dto.KnowledgeCreateRequest;
 import myaimentor_api.mentor.ai.dto.KnowledgeResponse;
@@ -11,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -42,7 +43,7 @@ public class AiServiceClient {
 					.toBodilessEntity()
 					.block();
 		} catch (WebClientResponseException e) {
-			throw translate(e, "AI bot-vector upsert 실패");
+			throw translate(e, ErrorCode.AI_BOT_VECTOR_UPSERT_FAILED);
 		}
 	}
 
@@ -59,7 +60,7 @@ public class AiServiceClient {
 			// AI 측에 없는 경우 — 멱등 삭제로 본다.
 			log.debug("AI bot-vector 이미 없음. botId={}, provider={}", botId, provider);
 		} catch (WebClientResponseException e) {
-			throw translate(e, "AI bot-vector 삭제 실패");
+			throw translate(e, ErrorCode.AI_BOT_VECTOR_DELETE_FAILED);
 		}
 	}
 
@@ -75,7 +76,7 @@ public class AiServiceClient {
 					.bodyToMono(KnowledgeResponse.class)
 					.block();
 		} catch (WebClientResponseException e) {
-			throw translate(e, "AI knowledge 등록 실패");
+			throw translate(e, ErrorCode.AI_KNOWLEDGE_CREATE_FAILED);
 		}
 	}
 
@@ -91,7 +92,7 @@ public class AiServiceClient {
 					.bodyToMono(new ParameterizedTypeReference<List<KnowledgeResponse>>() {})
 					.block();
 		} catch (WebClientResponseException e) {
-			throw translate(e, "AI knowledge 조회 실패");
+			throw translate(e, ErrorCode.AI_KNOWLEDGE_LIST_FAILED);
 		}
 	}
 
@@ -105,17 +106,17 @@ public class AiServiceClient {
 					.toBodilessEntity()
 					.block();
 		} catch (WebClientResponseException e) {
-			throw translate(e, "AI knowledge 삭제 실패");
+			throw translate(e, ErrorCode.AI_KNOWLEDGE_DELETE_FAILED);
 		}
 	}
 
-	private ResponseStatusException translate(WebClientResponseException e, String defaultMessage) {
+	private BusinessException translate(WebClientResponseException e, ErrorCode defaultCode) {
 		HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
-		log.warn("{} - status={}, body={}", defaultMessage, e.getStatusCode(), e.getResponseBodyAsString());
-		// 4xx는 그대로 전파, 5xx는 502 Bad Gateway 로 변환
+		log.warn("{} - status={}, body={}", defaultCode.getMessage(), e.getStatusCode(), e.getResponseBodyAsString());
+		// 4xx는 그대로 전파, 5xx는 ErrorCode 기본값(BAD_GATEWAY) 유지
 		if (status != null && status.is4xxClientError()) {
-			return new ResponseStatusException(status, defaultMessage);
+			return new BusinessException(defaultCode, status);
 		}
-		return new ResponseStatusException(HttpStatus.BAD_GATEWAY, defaultMessage);
+		return new BusinessException(defaultCode);
 	}
 }
