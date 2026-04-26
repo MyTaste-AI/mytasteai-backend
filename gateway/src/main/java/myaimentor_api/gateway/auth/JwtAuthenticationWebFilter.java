@@ -40,8 +40,9 @@ public class JwtAuthenticationWebFilter implements WebFilter, Ordered {
 
 	@Override
 	public int getOrder() {
-		// Gateway routing 보다 앞서 실행되도록 가장 높은 우선순위.
-		return Ordered.HIGHEST_PRECEDENCE;
+		// CORS 필터(HIGHEST_PRECEDENCE) 바로 다음. 401 응답에도 CORS 헤더가 붙어야 하므로 CORS 보다는 뒤,
+		// gateway routing 보다는 앞에서 실행.
+		return Ordered.HIGHEST_PRECEDENCE + 1;
 	}
 
 	@Override
