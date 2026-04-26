@@ -1,0 +1,27 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/myaimentor
+
+logging:
+  level:
+    root: INFO
+    myaimentor_api: DEBUG
+    org.springframework.data.mongodb: DEBUG
+
+ai:
+  service:
+    base-url: ${AI_SERVICE_URL:http://localhost:8000}
+
+mentor:
+  service:
+    base-url: ${MENTOR_SERVICE_URL:http://localhost:8082}
+
+jwt:
+  secret: ${JWT_SECRET:dev-secret-change-me-please-this-is-only-for-local}
+  access-token-expiration: 3600000      # 1h
+  refresh-token-expiration: 1209600000  # 14d
