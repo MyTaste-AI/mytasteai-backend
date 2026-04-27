@@ -32,6 +32,9 @@ public record BotCreateRequest(
 		// 청킹 설정 (옵션)
 		@Min(100) @Max(2000) Integer chunkSize,
 		@PositiveOrZero @Max(500) Integer chunkOverlap,
-		ChunkSplitter chunkSplitter
+		ChunkSplitter chunkSplitter,
+
+		// 접근권 — 미지정 시 공개(true)
+		Boolean isPublic
 ) {
 }

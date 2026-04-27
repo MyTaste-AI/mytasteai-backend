@@ -13,6 +13,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -46,6 +47,7 @@ public class Bot {
 	public static final int DEFAULT_CHUNK_SIZE = 500;
 	public static final int DEFAULT_CHUNK_OVERLAP = 100;
 	public static final ChunkSplitter DEFAULT_CHUNK_SPLITTER = ChunkSplitter.RECURSIVE;
+	public static final boolean DEFAULT_IS_PUBLIC = true;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -69,6 +71,14 @@ public class Bot {
 
 	@Column(name = "created_by", nullable = false)
 	private Long createdBy;
+
+	/**
+	 * 공개 봇 여부. true 면 모든 사용자가 사용 가능, false 면 BotAccess 에 등록된 사용자만 사용 가능.
+	 * ADMIN 은 항상 우회.
+	 */
+	@Column(name = "is_public", nullable = false)
+	@ColumnDefault("true")
+	private boolean isPublic;
 
 	/* ===== RAG 검색 설정 (채팅 시 retrieval) ===== */
 
@@ -117,7 +127,8 @@ public class Bot {
 			Double scoreThreshold,
 			Integer chunkSize,
 			Integer chunkOverlap,
-			ChunkSplitter chunkSplitter
+			ChunkSplitter chunkSplitter,
+			Boolean isPublic
 	) {
 		this.name = name;
 		this.description = description;
@@ -131,6 +142,7 @@ public class Bot {
 		this.chunkSize = chunkSize != null ? chunkSize : DEFAULT_CHUNK_SIZE;
 		this.chunkOverlap = chunkOverlap != null ? chunkOverlap : DEFAULT_CHUNK_OVERLAP;
 		this.chunkSplitter = chunkSplitter != null ? chunkSplitter : DEFAULT_CHUNK_SPLITTER;
+		this.isPublic = isPublic != null ? isPublic : DEFAULT_IS_PUBLIC;
 	}
 
 	/**
@@ -148,7 +160,8 @@ public class Bot {
 			Double scoreThreshold,
 			Integer chunkSize,
 			Integer chunkOverlap,
-			ChunkSplitter chunkSplitter
+			ChunkSplitter chunkSplitter,
+			Boolean isPublic
 	) {
 		boolean descriptionChanged = description != null && !description.equals(this.description);
 		boolean providerChanged = provider != null && provider != this.provider;
@@ -164,6 +177,7 @@ public class Bot {
 		if (chunkSize != null) this.chunkSize = chunkSize;
 		if (chunkOverlap != null) this.chunkOverlap = chunkOverlap;
 		if (chunkSplitter != null) this.chunkSplitter = chunkSplitter;
+		if (isPublic != null) this.isPublic = isPublic;
 
 		return descriptionChanged || providerChanged;
 	}

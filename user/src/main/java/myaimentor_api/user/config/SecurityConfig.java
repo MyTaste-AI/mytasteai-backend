@@ -45,6 +45,8 @@ public class SecurityConfig {
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(HttpMethod.POST, "/auth/signup", "/auth/login", "/auth/logout").permitAll()
 						.requestMatchers("/error").permitAll()
+						// 사용자 목록은 ADMIN 만 (픽커 용도) — 단건 조회 /users/{id} 는 인증 사용자 누구나
+						.requestMatchers(HttpMethod.GET, "/users").hasRole("ADMIN")
 						.anyRequest().authenticated()
 				)
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

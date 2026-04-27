@@ -50,21 +50,37 @@ public class BotController {
 	/**
 	 * 봇 목록 — categoryId 옵션 필터 + 페이징.
 	 * 기본 정렬은 id DESC (최근 등록 순).
+	 * 비-ADMIN 사용자는 공개 봇 + allowlist 에 포함된 봇만 조회 가능.
 	 */
 	@GetMapping
 	public Page<BotSummaryResponse> findAll(
+			@AuthenticationPrincipal AuthPrincipal principal,
 			@RequestParam(required = false) Long categoryId,
 			@PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable
 	) {
-		return botService.findAll(categoryId, pageable);
+		if (principal == null) {
+			throw new BusinessException(ErrorCode.AUTH_REQUIRED);
+		}
+		return botService.findAll(categoryId, pageable, principal.userId(), isAdmin(principal));
 	}
 
 	/**
-	 * 봇 상세 조회 — 미존재 시 404 (BOT-001).
+	 * 봇 상세 조회 — 미존재 또는 접근 불가 시 404 (BOT-001).
+	 * 비-ADMIN 사용자가 비공개/미허용 봇을 조회하면 존재 자체를 숨겨 404 처리.
 	 */
 	@GetMapping("/{id}")
-	public BotResponse findById(@PathVariable Long id) {
-		return botService.findById(id);
+	public BotResponse findById(
+			@AuthenticationPrincipal AuthPrincipal principal,
+			@PathVariable Long id
+	) {
+		if (principal == null) {
+			throw new BusinessException(ErrorCode.AUTH_REQUIRED);
+		}
+		return botService.findById(id, principal.userId(), isAdmin(principal));
+	}
+
+	private static boolean isAdmin(AuthPrincipal principal) {
+		return "ADMIN".equals(principal.role());
 	}
 
 	/**

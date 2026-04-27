@@ -12,9 +12,18 @@ import org.springframework.data.domain.Pageable;
  */
 public interface BotService {
 
-	Page<BotSummaryResponse> findAll(Long categoryId, Pageable pageable);
+	/**
+	 * @param userId  현재 호출자 ID
+	 * @param isAdmin true 면 권한 필터 우회 (모든 봇 조회)
+	 */
+	Page<BotSummaryResponse> findAll(Long categoryId, Pageable pageable, Long userId, boolean isAdmin);
 
-	BotResponse findById(Long id);
+	/**
+	 * @param userId  현재 호출자 ID
+	 * @param isAdmin true 면 권한 검증 우회
+	 *                false 인 경우 비공개 봇이고 allowlist 에 없으면 404 (존재 숨김)
+	 */
+	BotResponse findById(Long id, Long userId, boolean isAdmin);
 
 	Long create(BotCreateRequest request, Long createdBy);
 

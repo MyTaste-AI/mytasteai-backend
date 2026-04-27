@@ -11,9 +11,10 @@ public record BotSummaryResponse(
 		String name,
 		String description,
 		Provider provider,
-		Long categoryId
+		Long categoryId,
+		Boolean isPublic
 ) {
 	public static BotSummaryResponse from(Bot b) {
-		return new BotSummaryResponse(b.getId(), b.getName(), b.getDescription(), b.getProvider(), b.getCategoryId());
+		return new BotSummaryResponse(b.getId(), b.getName(), b.getDescription(), b.getProvider(), b.getCategoryId(), b.isPublic());
 	}
 }

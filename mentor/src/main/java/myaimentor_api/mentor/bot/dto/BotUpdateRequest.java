@@ -29,6 +29,9 @@ public record BotUpdateRequest(
 		// 청킹 설정
 		@Min(100) @Max(2000) Integer chunkSize,
 		@PositiveOrZero @Max(500) Integer chunkOverlap,
-		ChunkSplitter chunkSplitter
+		ChunkSplitter chunkSplitter,
+
+		// 접근권 토글 (null = 변경 안 함)
+		Boolean isPublic
 ) {
 }

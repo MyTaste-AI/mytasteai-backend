@@ -7,6 +7,8 @@ import myaimentor_api.user.account.dto.UpdateMeRequest;
 import myaimentor_api.user.account.dto.UserResponse;
 import myaimentor_api.user.domain.User;
 import myaimentor_api.user.domain.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,19 @@ public class UserServiceImpl implements UserService {
 		User user = userRepository.findById(id)
 				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 		return UserResponse.from(user);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Page<UserResponse> findAll(String query, Pageable pageable) {
+		Page<User> page;
+		if (query == null || query.isBlank()) {
+			page = userRepository.findAll(pageable);
+		} else {
+			page = userRepository.findByEmailContainingIgnoreCaseOrNameContainingIgnoreCase(
+					query, query, pageable);
+		}
+		return page.map(UserResponse::from);
 	}
 
 	@Override

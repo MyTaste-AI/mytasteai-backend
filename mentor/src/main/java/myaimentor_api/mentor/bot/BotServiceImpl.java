@@ -10,6 +10,7 @@ import myaimentor_api.mentor.bot.dto.BotResponse;
 import myaimentor_api.mentor.bot.dto.BotSummaryResponse;
 import myaimentor_api.mentor.bot.dto.BotUpdateRequest;
 import myaimentor_api.mentor.domain.Bot;
+import myaimentor_api.mentor.domain.BotAccessRepository;
 import myaimentor_api.mentor.domain.BotRepository;
 import myaimentor_api.mentor.domain.CategoryRepository;
 import myaimentor_api.mentor.domain.Provider;
@@ -34,22 +35,35 @@ public class BotServiceImpl implements BotService {
 
 	private final BotRepository botRepository;
 	private final CategoryRepository categoryRepository;
+	private final BotAccessRepository botAccessRepository;
 	private final AiServiceClient aiServiceClient;
 
 	@Override
 	@Transactional(readOnly = true)
-	public Page<BotSummaryResponse> findAll(Long categoryId, Pageable pageable) {
-		Page<Bot> page = (categoryId == null)
-				? botRepository.findAll(pageable)
-				: botRepository.findAllByCategoryId(categoryId, pageable);
+	public Page<BotSummaryResponse> findAll(Long categoryId, Pageable pageable, Long userId, boolean isAdmin) {
+		Page<Bot> page;
+		if (isAdmin) {
+			page = (categoryId == null)
+					? botRepository.findAll(pageable)
+					: botRepository.findAllByCategoryId(categoryId, pageable);
+		} else {
+			page = (categoryId == null)
+					? botRepository.findAllAccessibleByUser(userId, pageable)
+					: botRepository.findAllAccessibleByUserAndCategoryId(userId, categoryId, pageable);
+		}
 		return page.map(BotSummaryResponse::from);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public BotResponse findById(Long id) {
+	public BotResponse findById(Long id, Long userId, boolean isAdmin) {
 		Bot bot = botRepository.findById(id)
 				.orElseThrow(() -> new BusinessException(ErrorCode.BOT_NOT_FOUND));
+
+		// 비-ADMIN: 비공개 봇이고 allowlist 에 없으면 존재를 숨겨 404 처리
+		if (!isAdmin && !bot.isPublic() && !botAccessRepository.existsByBotIdAndUserId(id, userId)) {
+			throw new BusinessException(ErrorCode.BOT_NOT_FOUND);
+		}
 		return BotResponse.from(bot);
 	}
 
@@ -72,6 +86,7 @@ public class BotServiceImpl implements BotService {
 				.chunkSize(request.chunkSize())
 				.chunkOverlap(request.chunkOverlap())
 				.chunkSplitter(request.chunkSplitter())
+				.isPublic(request.isPublic())
 				.build());
 
 		// AI 서비스에 라우팅 벡터 등록 — 실패하면 트랜잭션 롤백
@@ -94,7 +109,8 @@ public class BotServiceImpl implements BotService {
 				request.name(), request.description(), request.systemPrompt(),
 				request.provider(), request.categoryId(),
 				request.searchType(), request.topK(), request.scoreThreshold(),
-				request.chunkSize(), request.chunkOverlap(), request.chunkSplitter()
+				request.chunkSize(), request.chunkOverlap(), request.chunkSplitter(),
+				request.isPublic()
 		);
 
 		if (aiResyncNeeded) {
@@ -113,6 +129,7 @@ public class BotServiceImpl implements BotService {
 		Bot bot = botRepository.findById(id)
 				.orElseThrow(() -> new BusinessException(ErrorCode.BOT_NOT_FOUND));
 		Provider provider = bot.getProvider();
+		botAccessRepository.deleteAllByBotId(id);
 		botRepository.delete(bot);
 		// AI 측 벡터 삭제는 DB 트랜잭션 끝에 시도. 이미 없는 경우는 client 가 삼킨다.
 		aiServiceClient.deleteBotVector(id, provider);

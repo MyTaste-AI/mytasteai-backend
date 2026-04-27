@@ -46,6 +46,10 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.POST, "/categories", "/bots").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.DELETE, "/categories/*", "/bots/*").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.PATCH, "/bots/*").hasRole("ADMIN")
+						// 봇 접근권 관리 — ADMIN
+						.requestMatchers(HttpMethod.GET, "/bots/*/access").hasRole("ADMIN")
+						.requestMatchers(HttpMethod.POST, "/bots/*/access").hasRole("ADMIN")
+						.requestMatchers(HttpMethod.DELETE, "/bots/*/access/*").hasRole("ADMIN")
 						// 지식 — ADMIN (등록/삭제/미리보기)
 						.requestMatchers(HttpMethod.POST, "/bots/*/knowledge").hasRole("ADMIN")
 						.requestMatchers(HttpMethod.POST, "/bots/*/knowledge/preview").hasRole("ADMIN")
