@@ -1,4 +1,4 @@
-package myaimentor_api.chat.auth;
+package myaimentor_api.common.auth;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -10,18 +10,19 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
 
 /**
- * Authorization: Bearer {token} 헤더 → SecurityContext 주입.
- * 검증 실패 시 컨텍스트 비우고 통과 (인가는 SecurityFilterChain 에서).
+ * Authorization: Bearer {token} → SecurityContext 주입.
+ * - 검증 실패 시 컨텍스트 비우고 통과 (인가는 SecurityFilterChain 에서 결정)
+ *
+ * @Component 가 아니므로 각 서비스의 SecurityConfig 에서 @Bean 으로 등록한다
+ * (gateway 같은 reactive 모듈이 servlet 필터를 우연히 픽업하지 않도록).
  */
 @Slf4j
-@Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 

@@ -2,16 +2,20 @@ package myaimentor_api.mentor.ai;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import myaimentor_api.common.error.BusinessException;
+import myaimentor_api.common.error.ErrorCode;
 import myaimentor_api.mentor.ai.dto.BotVectorUpsertRequest;
 import myaimentor_api.mentor.ai.dto.KnowledgeCreateRequest;
+import myaimentor_api.mentor.ai.dto.KnowledgePreviewRequest;
 import myaimentor_api.mentor.ai.dto.KnowledgeResponse;
+import myaimentor_api.mentor.domain.ChunkSplitter;
 import myaimentor_api.mentor.domain.Provider;
+import myaimentor_api.mentor.knowledge.dto.KnowledgePreviewResponse;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -42,7 +46,7 @@ public class AiServiceClient {
 					.toBodilessEntity()
 					.block();
 		} catch (WebClientResponseException e) {
-			throw translate(e, "AI bot-vector upsert 실패");
+			throw translate(e, ErrorCode.AI_BOT_VECTOR_UPSERT_FAILED);
 		}
 	}
 
@@ -59,23 +63,61 @@ public class AiServiceClient {
 			// AI 측에 없는 경우 — 멱등 삭제로 본다.
 			log.debug("AI bot-vector 이미 없음. botId={}, provider={}", botId, provider);
 		} catch (WebClientResponseException e) {
-			throw translate(e, "AI bot-vector 삭제 실패");
+			throw translate(e, ErrorCode.AI_BOT_VECTOR_DELETE_FAILED);
 		}
 	}
 
 	/* ===== Knowledge ===== */
 
-	public KnowledgeResponse createKnowledge(Long botId, String content, Provider provider) {
-		var body = new KnowledgeCreateRequest(botId, content, provider.toAiServiceValue());
+	/**
+	 * 지식 등록 — AI 서비스가 청킹해서 청크별 row 생성. 응답은 생성된 청크 리스트.
+	 */
+	public List<KnowledgeResponse> createKnowledge(
+			Long botId,
+			String content,
+			Provider provider,
+			Integer chunkSize,
+			Integer chunkOverlap,
+			ChunkSplitter chunkSplitter
+	) {
+		String splitter = chunkSplitter == null ? null : chunkSplitter.name().toLowerCase();
+		var body = new KnowledgeCreateRequest(
+				botId, content, provider.toAiServiceValue(),
+				chunkSize, chunkOverlap, splitter
+		);
 		try {
 			return aiServiceWebClient.post()
 					.uri("/knowledge")
 					.bodyValue(body)
 					.retrieve()
-					.bodyToMono(KnowledgeResponse.class)
+					.bodyToMono(new ParameterizedTypeReference<List<KnowledgeResponse>>() {})
 					.block();
 		} catch (WebClientResponseException e) {
-			throw translate(e, "AI knowledge 등록 실패");
+			throw translate(e, ErrorCode.AI_KNOWLEDGE_CREATE_FAILED);
+		}
+	}
+
+	/**
+	 * 청킹 미리보기 — DB 저장 X, 분할 결과만 반환.
+	 * AI 서비스가 미구현 (404) 이면 BAD_GATEWAY 로 변환되어 클라이언트가 fallback 가능.
+	 */
+	public KnowledgePreviewResponse previewKnowledge(
+			String content,
+			Integer chunkSize,
+			Integer chunkOverlap,
+			ChunkSplitter chunkSplitter
+	) {
+		String splitter = chunkSplitter == null ? null : chunkSplitter.name().toLowerCase();
+		var body = new KnowledgePreviewRequest(content, chunkSize, chunkOverlap, splitter);
+		try {
+			return aiServiceWebClient.post()
+					.uri("/knowledge/preview")
+					.bodyValue(body)
+					.retrieve()
+					.bodyToMono(KnowledgePreviewResponse.class)
+					.block();
+		} catch (WebClientResponseException e) {
+			throw translate(e, ErrorCode.AI_KNOWLEDGE_PREVIEW_FAILED);
 		}
 	}
 
@@ -91,7 +133,7 @@ public class AiServiceClient {
 					.bodyToMono(new ParameterizedTypeReference<List<KnowledgeResponse>>() {})
 					.block();
 		} catch (WebClientResponseException e) {
-			throw translate(e, "AI knowledge 조회 실패");
+			throw translate(e, ErrorCode.AI_KNOWLEDGE_LIST_FAILED);
 		}
 	}
 
@@ -105,17 +147,17 @@ public class AiServiceClient {
 					.toBodilessEntity()
 					.block();
 		} catch (WebClientResponseException e) {
-			throw translate(e, "AI knowledge 삭제 실패");
+			throw translate(e, ErrorCode.AI_KNOWLEDGE_DELETE_FAILED);
 		}
 	}
 
-	private ResponseStatusException translate(WebClientResponseException e, String defaultMessage) {
+	private BusinessException translate(WebClientResponseException e, ErrorCode defaultCode) {
 		HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
-		log.warn("{} - status={}, body={}", defaultMessage, e.getStatusCode(), e.getResponseBodyAsString());
-		// 4xx는 그대로 전파, 5xx는 502 Bad Gateway 로 변환
+		log.warn("{} - status={}, body={}", defaultCode.getMessage(), e.getStatusCode(), e.getResponseBodyAsString());
+		// 4xx는 그대로 전파, 5xx는 ErrorCode 기본값(BAD_GATEWAY) 유지
 		if (status != null && status.is4xxClientError()) {
-			return new ResponseStatusException(status, defaultMessage);
+			return new BusinessException(defaultCode, status);
 		}
-		return new ResponseStatusException(HttpStatus.BAD_GATEWAY, defaultMessage);
+		return new BusinessException(defaultCode);
 	}
 }

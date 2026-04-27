@@ -6,4 +6,14 @@ jar { enabled = true }
 dependencies {
 	api 'org.springframework.boot:spring-boot-starter'
 	api 'org.springframework.boot:spring-boot-starter-validation'
+
+	// servlet/security 는 common 컴파일에만 필요 (GlobalExceptionHandler, JwtAuthenticationFilter).
+	// api 로 노출하면 reactive 모듈(gateway) 클래스패스에 servlet 이 끌려가 Spring Cloud Gateway 가 기동 실패.
+	// 각 서비스(chat/mentor/user)는 자체 build.gradle 에서 starter-web/security 를 implementation 으로 선언함.
+	compileOnly 'org.springframework.boot:spring-boot-starter-web'
+	compileOnly 'org.springframework.boot:spring-boot-starter-security'
+
+	api 'io.jsonwebtoken:jjwt-api:0.12.6'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 }
