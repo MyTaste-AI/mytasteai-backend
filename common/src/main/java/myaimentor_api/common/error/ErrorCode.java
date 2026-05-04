@@ -21,6 +21,8 @@ public enum ErrorCode {
 
 	// ===== 사용자 =====
 	USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER-001", "사용자를 찾을 수 없습니다."),
+	USER_WITHDRAWN(HttpStatus.FORBIDDEN, "USER-002", "탈퇴 처리된 계정입니다."),
+	USER_ALREADY_WITHDRAWN(HttpStatus.CONFLICT, "USER-003", "이미 탈퇴 진행 중인 계정입니다."),
 
 	// ===== 멘토 / 봇 =====
 	BOT_NOT_FOUND(HttpStatus.NOT_FOUND, "BOT-001", "봇을 찾을 수 없습니다."),

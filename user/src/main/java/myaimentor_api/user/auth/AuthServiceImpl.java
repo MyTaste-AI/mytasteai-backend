@@ -54,6 +54,10 @@ public class AuthServiceImpl implements AuthService {
 		if (!passwordEncoder.matches(request.password(), user.getPassword())) {
 			throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
 		}
+		// 탈퇴 진행 중인 계정은 로그인 불가 — 자격증명이 맞은 경우에만 안내 메시지 노출 (열거 공격 방지).
+		if (user.isWithdrawn()) {
+			throw new BusinessException(ErrorCode.USER_WITHDRAWN);
+		}
 		String accessToken = jwtProvider.createAccessToken(user);
 		// expiresIn 은 초 단위 (JwtProperties 는 밀리초)
 		return TokenResponse.bearer(accessToken, jwtProperties.accessTokenExpiration() / 1000);

@@ -12,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+
 /**
  * 사용자 서비스 구현.
  * - findById:  공개 필드(id/email/name/role) 만 응답으로 변환. 비밀번호는 노출 금지.
@@ -52,5 +54,16 @@ public class UserServiceImpl implements UserService {
 				.orElseThrow(() -> new BusinessException(ErrorCode.AUTH_REQUIRED));
 		user.updateProfile(request.name());
 		return UserResponse.from(user);
+	}
+
+	@Override
+	@Transactional
+	public void withdrawMe(Long userId, String reason) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.AUTH_REQUIRED));
+		if (user.isWithdrawn()) {
+			throw new BusinessException(ErrorCode.USER_ALREADY_WITHDRAWN);
+		}
+		user.withdraw(Instant.now(), reason);
 	}
 }
