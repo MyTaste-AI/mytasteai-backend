@@ -15,7 +15,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -90,6 +92,23 @@ public class ChatController {
 	) {
 		Long userId = requireUserId(principal);
 		return chatService.getSession(userId, id);
+	}
+
+	/**
+	 * 세션 삭제 (하드)
+	 * DELETE /chat/sessions/{id}
+	 *
+	 * 본인 세션만 삭제 가능. 메시지(임베드)는 도큐먼트와 함께 삭제됨.
+	 * 본인 세션이 아니거나 미존재면 404 (CHAT-001).
+	 */
+	@DeleteMapping("/chat/sessions/{id}")
+	public ResponseEntity<Void> deleteSession(
+			@AuthenticationPrincipal AuthPrincipal principal,
+			@PathVariable String id
+	) {
+		Long userId = requireUserId(principal);
+		chatService.deleteSession(userId, id);
+		return ResponseEntity.noContent().build();
 	}
 
 	private Long requireUserId(AuthPrincipal principal) {

@@ -21,4 +21,6 @@ public interface ChatService {
 	Page<ChatSessionSummary> listSessions(Long userId, Pageable pageable);
 
 	ChatSessionDetail getSession(Long userId, String sessionId);
+
+	void deleteSession(Long userId, String sessionId);
 }

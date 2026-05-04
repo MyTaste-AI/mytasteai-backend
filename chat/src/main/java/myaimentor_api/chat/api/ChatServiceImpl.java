@@ -82,6 +82,12 @@ public class ChatServiceImpl implements ChatService {
 		return ChatSessionDetail.from(loadOwned(userId, sessionId));
 	}
 
+	@Override
+	public void deleteSession(Long userId, String sessionId) {
+		ChatSession session = loadOwned(userId, sessionId);
+		sessionRepository.delete(session);
+	}
+
 	private ChatSession newSession(Long userId, BotInfo bot, String firstQuestion) {
 		String title = firstQuestion.length() > TITLE_MAX
 				? firstQuestion.substring(0, TITLE_MAX) + "…"

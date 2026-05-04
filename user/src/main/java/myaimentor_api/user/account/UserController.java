@@ -7,11 +7,14 @@ import myaimentor_api.common.error.BusinessException;
 import myaimentor_api.common.error.ErrorCode;
 import myaimentor_api.user.account.dto.UpdateMeRequest;
 import myaimentor_api.user.account.dto.UserResponse;
+import myaimentor_api.user.account.dto.WithdrawRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -75,5 +78,28 @@ public class UserController {
 			throw new BusinessException(ErrorCode.AUTH_REQUIRED);
 		}
 		return userService.updateMe(principal.userId(), request);
+	}
+
+	/**
+	 * 회원 탈퇴 (soft delete)
+	 * DELETE /users/me
+	 *
+	 * withdrawnAt 시각/사유를 기록하고 30일 유예 후 별도 배치가 영구 삭제한다.
+	 * 유예 기간 동안은 로그인 차단 — 토큰은 만료 시까지 유효하나, 재로그인은 USER_WITHDRAWN 으로 막힘.
+	 * 요청 body 의 reason 은 선택 (서비스 개선 통계 용도, 최대 500자).
+	 * - 미인증 401 (AUTH-001)
+	 * - 이미 탈퇴 진행 중 409 (USER-003)
+	 */
+	@DeleteMapping("/me")
+	public ResponseEntity<Void> withdrawMe(
+			@AuthenticationPrincipal AuthPrincipal principal,
+			@RequestBody(required = false) @Valid WithdrawRequest request
+	) {
+		if (principal == null) {
+			throw new BusinessException(ErrorCode.AUTH_REQUIRED);
+		}
+		String reason = request == null ? null : request.reason();
+		userService.withdrawMe(principal.userId(), reason);
+		return ResponseEntity.noContent().build();
 	}
 }

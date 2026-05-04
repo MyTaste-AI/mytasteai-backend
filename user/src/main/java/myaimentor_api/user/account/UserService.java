@@ -26,4 +26,10 @@ public interface UserService {
 	 * 본인 프로필 부분 업데이트 (현재는 name만 지원).
 	 */
 	UserResponse updateMe(Long userId, UpdateMeRequest request);
+
+	/**
+	 * 본인 회원 탈퇴 요청 (soft delete). withdrawnAt 시각/사유를 기록하고 30일 유예 후 영구 삭제 예정.
+	 * 이미 탈퇴 진행 중이면 USER_ALREADY_WITHDRAWN.
+	 */
+	void withdrawMe(Long userId, String reason);
 }
